@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import "./App.css";
 import { HexColorPicker } from "react-colorful";
-import IconButton from '@mui/material/IconButton';
-import Icon from '@mui/material/Icon';
-import Tooltip from '@mui/material/Tooltip';
-import TextField from '@mui/material/TextField';
-import Switch from '@mui/material/Switch';
-import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import FormGroup from '@mui/material/FormGroup';
+import Icon from '@mui/material/Icon';
+import IconButton from '@mui/material/IconButton';
+import Modal from '@mui/material/Modal';
+import Slider from '@mui/material/Slider';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 
 interface IGraphItem {
   name: string;
@@ -25,8 +27,13 @@ export default function Home() {
   const [showBarColourPicker, setBarColourPicker] = useState(false);
   const [textColour, setTextColour] = useState("#000000");
   const [showTextColourPicker, setTextColourPicker] = useState(false);
+  const [textOutlineColour, setTextOutlineColour] = useState("#ffffff");
+  const [showTextOutlineColourPicker, setTextOutlineColourPicker] = useState(false);
+  const [showOutline, setShowOutline] = useState(false);
   const [showBorder, setShowBorder] = useState(false);
   const [showTotalVotes, setShowTotalVotes] = useState(false);
+  const [chartWidth, setChartWidth] = useState(90);
+  const [showInfo, setShowInfo] = useState(false);
 
   const updateItem = (index: number, item: IGraphItem) => {
     if (! graphItems[index]) {
@@ -54,16 +61,29 @@ export default function Home() {
     return totalCount;
   };
 
+  const getTextOutlineStyle = () => {
+    return `
+      -1px -1px 0 ${textOutlineColour},
+      0 -1px 0 ${textOutlineColour},
+      1px -1px 0 ${textOutlineColour},
+      1px 0 0 ${textOutlineColour},
+      1px 1px 0 ${textOutlineColour},
+      0 1px 0 ${textOutlineColour},
+      -1px 1px 0 ${textOutlineColour},
+      -1px 0 0 ${textOutlineColour}
+    `;
+  };
+
   const renderBars = () => {
     const totalCount = getTotalVotes();
 
     return graphItems.map((graphItem, index) => {
-      if (graphItem.name && graphItem.count) {
+      if (graphItem.name && graphItem.count >= 0) {
         const barWidth = ((graphItem.count || 0) / totalCount) * 100 + "%";
         return (
           <div key={`graph-bar-${index}`} className="graph-item">
-            <div className="graph-info">
-              {graphItem.name ? graphItem.name : ""} <span className="graph-count">{graphItem.count ? `(${graphItem.count})` : ""}</span>
+            <div className="graph-info" style={showOutline ? {textShadow: getTextOutlineStyle()} : {}}>
+              {graphItem.name} <span className="graph-count">({graphItem.count})</span>
             </div>
             <div className="graph-bar" style={{maxWidth : barWidth, backgroundColor: barColour}}>
               &emsp;
@@ -151,6 +171,16 @@ export default function Home() {
     }
   }
 
+  const updateChartWidth = (event: Event, newValue: number | number[]) => {
+    if (typeof newValue === 'number') {
+      setChartWidth(newValue);
+    }
+  }
+
+  const chartWidthLabel = (value: number) => {
+    return `${value}%`;
+  }
+
   const updateTitle = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = event.target.value;
     setGraphTitle(newValue);
@@ -158,6 +188,10 @@ export default function Home() {
 
   const updateTextColour = (colour: string) => {
     setTextColour(colour);
+  };
+
+  const updateTextOutlineColour = (colour: string) => {
+    setTextOutlineColour(colour);
   };
 
   const updateBarColour = (colour: string) => {
@@ -170,6 +204,10 @@ export default function Home() {
 
   const updateTextColourFromText = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     setTextColour(event.target.value);
+  };
+
+  const updateTextOutlineColourFromText = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    setTextOutlineColour(event.target.value);
   };
 
   const updateBarColourFromText = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -206,8 +244,42 @@ export default function Home() {
 
   return (
     <div className="chart">
-      <div className="main-chart" style={{backgroundColor: chromaColour, color: textColour}}>
-        <div style={{marginBottom: "32px"}}>
+      <Modal open={showInfo} aria-labelledby="modal-info" aria-describedby="modal-modal-description" onClose={() => setShowInfo(!showInfo)}>
+        <div className="modal-box">
+          <h3 style={{marginTop: 8}}>How to add as a stream overlay</h3>
+          <ul>
+            <li>
+              Add a Window Capture of this browser window
+            </li>
+            <li>
+              Crop the capture down to the chart area
+            </li>
+            <li>
+              Use a chroma/colour key to make the chart background transparent
+            </li>
+          </ul>
+          <h3 style={{marginTop: 8}}>How to use the chart builder</h3>
+          <ul>
+            <li>
+              Click <Icon fontSize="small">add_circle</Icon> to add a new item to the chart
+            </li>
+            <li>
+              Bars will only show on the chart if they have a name and a count
+            </li>
+            <li>
+              Bars will update in realtime when names and counts are changed
+            </li>
+            <li>
+              To remove an item from the chart, you can either blank out the item's name or click the <Icon fontSize="small">delete_forever</Icon> next to the item
+            </li>
+            <li>
+              To clear the chart, click <Icon fontSize="small">layers_clear</Icon> at the top of the items list
+            </li>
+          </ul>
+        </div>
+      </Modal>
+      <div className="main-chart" style={{backgroundColor: chromaColour, color: textColour, width: chartWidth + "%"}}>
+        <div className="graph-title-area" style={showOutline ? {textShadow: getTextOutlineStyle()} : {}}>
           <div className="graph-title">
             {graphTitle}
           </div>
@@ -228,6 +300,9 @@ export default function Home() {
         <div className="title-form">
           <div className="form-group">
             <TextField id="graph-title" label="Chart Title" variant="outlined" value={graphTitle} onChange={(event) => updateTitle(event)} />
+            <Tooltip title="How to use">
+              <IconButton color="primary" onClick={() => setShowInfo(!showInfo)}><Icon>info</Icon></IconButton>
+            </Tooltip>
           </div>
           <div className="form-group">
             <FormGroup>
@@ -235,8 +310,16 @@ export default function Home() {
                 control={<Switch checked={showBorder} onChange={() => setShowBorder(!showBorder)} inputProps={{ 'aria-label': 'controlled' }} />}
                 label="Chart axis lines" />
               <FormControlLabel
+                control={<Switch checked={showOutline} onChange={() => setShowOutline(!showOutline)} inputProps={{ 'aria-label': 'controlled' }} />}
+                label="Outline on text" />
+              <FormControlLabel
                 control={<Switch checked={showTotalVotes} onChange={() => setShowTotalVotes(!showTotalVotes)} inputProps={{ 'aria-label': 'controlled' }} />}
                 label="Total votes" />
+              <FormControlLabel
+                className="slider-label"
+                control={<Slider value={chartWidth} aria-label="Chart width" valueLabelFormat={chartWidthLabel} getAriaValueText={chartWidthLabel} valueLabelDisplay="auto" onChange={updateChartWidth} />}
+                label="Chart width"
+                labelPlacement="top" />
             </FormGroup>
           </div>
           <div className="form-group">
@@ -255,6 +338,15 @@ export default function Home() {
             </Tooltip>
             { showTextColourPicker && <div className="colour-picker">
               <HexColorPicker className="picker" color={textColour} onChange={ updateTextColour } />
+              </div> }
+          </div>
+          <div className="form-group">
+            <TextField id="graph-text" label="Text outline colour" variant="outlined" value={textOutlineColour} onChange={updateTextOutlineColourFromText} />
+            <Tooltip title="Toggle text outline colour picker">
+              <IconButton color="primary" onClick={() => setTextOutlineColourPicker(!showTextOutlineColourPicker)}><Icon>{showTextOutlineColourPicker ? "cancel" : "palette"}</Icon></IconButton>
+            </Tooltip>
+            { showTextOutlineColourPicker && <div className="colour-picker">
+              <HexColorPicker className="picker" color={textOutlineColour} onChange={ updateTextOutlineColour } />
               </div> }
           </div>
           <div className="form-group">

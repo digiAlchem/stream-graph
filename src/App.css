@@ -40,7 +40,11 @@ body {
 .graph-area {
   border-left: 2px solid;
   border-bottom: 2px solid;
-  padding: 32px 0;
+  padding: 16px 0;
+}
+
+.graph-title-area {
+  margin-bottom: 16px;
 }
 
 .graph-form-number {
@@ -129,4 +133,22 @@ button:not(:last-of-type) {
 
 h2 > span {
   margin-right: 16px;
+}
+
+.modal-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 640px;
+  padding: 16px;
+  background-color: rgb(240, 240, 240);
+  border-radius: 16px;
+  box-shadow: 2px 2px 3px 0px rgb(0 0 0 / 20%);
+}
+
+.slider-label {
+  align-items: start !important;
+  margin-left: 0px !important;
+  margin-right: 0px !important
 }
