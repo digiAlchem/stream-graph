@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 import { HexColorPicker } from "react-colorful";
+import Cookies from 'universal-cookie';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormGroup from '@mui/material/FormGroup';
 import Icon from '@mui/material/Icon';
 import IconButton from '@mui/material/IconButton';
 import Modal from '@mui/material/Modal';
+import MuiAlert from '@mui/material/Alert';
 import Slider from '@mui/material/Slider';
+import Snackbar from '@mui/material/Snackbar';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
@@ -17,6 +20,7 @@ interface IGraphItem {
 }
 
 export default function Home() {
+  const cookies = new Cookies();
   const blankItems: IGraphItem[] = [];
 
   const [graphItems, setGraphItems] = useState(blankItems);
@@ -34,6 +38,30 @@ export default function Home() {
   const [showTotalVotes, setShowTotalVotes] = useState(false);
   const [chartWidth, setChartWidth] = useState(90);
   const [showInfo, setShowInfo] = useState(false);
+  const [allowSaving, setAllowSaving] = useState(false);
+  const [showSaveSnackbar, setShowSaveSnackbar] = useState(false);
+  const [showDeleteSnackbar, setShowDeleteSnackbar] = useState(false);
+
+  useEffect(() => {
+    // If we have cookie data, load that in
+    const cookieData = cookies.get("stream-poll-save-data");
+
+    if (cookieData) {
+      const chartOptions = cookieData.options;
+
+      setGraphItems(cookieData.items);
+      setGraphTitle(chartOptions.graphTitle);
+      setShowBorder(chartOptions.showBorder);
+      setShowOutline(chartOptions.showOutline);
+      setShowTotalVotes(chartOptions.showTotalVotes);
+      setChartWidth(chartOptions.chartWidth);
+      setBarColour(chartOptions.barColour);
+      setTextColour(chartOptions.textColour);
+      setTextOutlineColour(chartOptions.textOutlineColour);
+      setChromaColour(chartOptions.chromaColour);
+      setAllowSaving(chartOptions.allowSaving);
+    }
+  }, []);
 
   const updateItem = (index: number, item: IGraphItem) => {
     if (! graphItems[index]) {
@@ -137,6 +165,7 @@ export default function Home() {
     if (inputIndexArray) {
       const currentIndex = parseInt(inputIndexArray[0]);
       updateItem(currentIndex, {name: newValue, count: graphItems[currentIndex].count});
+      doAutoSave();
     }
   };
 
@@ -149,12 +178,14 @@ export default function Home() {
     if (inputIndexArray) {
       const currentIndex = parseInt(inputIndexArray[0]);
       updateItem(currentIndex, {name: graphItems[currentIndex].name, count: (Number.isNaN(newValueNumber) ? 0 : newValueNumber)});
+      doAutoSave();
     }
   };
 
   const addOneToValue = (index: number) => {
     const currentCount = graphItems[index].count;
     updateItem(index, {name: graphItems[index].name, count: currentCount + 1});
+    doAutoSave();
   }
 
   const subOneFromValue = (index: number) => {
@@ -168,12 +199,14 @@ export default function Home() {
       }
 
       updateItem(index, {name: graphItems[index].name, count: newCount});
+      doAutoSave();
     }
   }
 
   const updateChartWidth = (event: Event, newValue: number | number[]) => {
     if (typeof newValue === 'number') {
       setChartWidth(newValue);
+      doAutoSave();
     }
   }
 
@@ -184,43 +217,54 @@ export default function Home() {
   const updateTitle = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = event.target.value;
     setGraphTitle(newValue);
+    doAutoSave();
   };
 
   const updateTextColour = (colour: string) => {
     setTextColour(colour);
+    doAutoSave();
   };
 
   const updateTextOutlineColour = (colour: string) => {
     setTextOutlineColour(colour);
+    doAutoSave();
   };
 
   const updateBarColour = (colour: string) => {
     setBarColour(colour);
+    doAutoSave();
   };
 
   const updateChromaColour = (colour: string) => {
     setChromaColour(colour);
+    doAutoSave();
   };
 
   const updateTextColourFromText = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     setTextColour(event.target.value);
+    doAutoSave();
   };
 
   const updateTextOutlineColourFromText = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     setTextOutlineColour(event.target.value);
+    doAutoSave();
   };
 
   const updateBarColourFromText = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     setBarColour(event.target.value);
+    doAutoSave();
   };
 
   const updateChromaColourFromText = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     setChromaColour(event.target.value);
+    doAutoSave();
   };
 
   const addNewItem = () => {
     const newIndex = graphItems.length;
     updateItem(newIndex, { name: "", count: 0 });
+
+    doAutoSave();
   };
 
   const removeItem = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -236,14 +280,66 @@ export default function Home() {
         setGraphItems(currentItems);
       }
     }
+
+    doAutoSave();
   };
 
   const removeAllItems = () => {
     setGraphItems(blankItems);
+    doAutoSave();
+  };
+
+  const doAutoSave = (override?: boolean) => {
+    if (allowSaving || override) {
+      const saveData = {
+        options: {
+          graphTitle,
+          showBorder,
+          showOutline,
+          showTotalVotes,
+          chartWidth,
+          barColour,
+          textColour,
+          textOutlineColour,
+          chromaColour,
+          allowSaving
+        },
+        items: graphItems
+      };
+
+      cookies.set("stream-poll-save-data", saveData, { path: '/' });
+
+      if (override) {
+        setShowSaveSnackbar(true);
+      }
+    };
+  };
+
+  const removeSaveData = () => {
+    cookies.remove("stream-poll-save-data", { path: '/' });
+    setShowDeleteSnackbar(true);
   };
 
   return (
     <div className="chart">
+      <Snackbar
+        open={showSaveSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setShowSaveSnackbar(false)}
+      >
+        <MuiAlert elevation={6} severity="success" variant="filled">
+          Local chart data saved
+        </MuiAlert>
+      </Snackbar>
+      <Snackbar
+        open={showDeleteSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setShowDeleteSnackbar(false)}
+      >
+        <MuiAlert elevation={6} severity="success" variant="filled">
+          Local chart data deleted
+        </MuiAlert>
+      </Snackbar>
       <Modal open={showInfo} aria-labelledby="modal-info" aria-describedby="modal-modal-description" onClose={() => setShowInfo(!showInfo)}>
         <div className="modal-box">
           <h3 style={{marginTop: 8}}>How to add as a stream overlay</h3>
@@ -274,6 +370,26 @@ export default function Home() {
             </li>
             <li>
               To clear the chart, click <Icon fontSize="small">layers_clear</Icon> at the top of the items list
+            </li>
+          </ul>
+          <h3 style={{marginTop: 8}}>Using auto-save</h3>
+          <ul>
+            <li>
+              When auto-saving is enabled, updates to the chart (both values and configuration) will be periodically stored in a local cookie file.
+            </li>
+            <li>
+              You can trigger a manual save by clicking <Icon fontSize="small">save</Icon> on the right-hand side of the chart items area.
+              <ul>
+                <li>
+                  It is recommended you trigger a save this way before you leave the page to prevent data loss.
+                </li>
+              </ul>
+            </li>
+            <li>
+              When you come back to this page, if the cookie with your data is still present, the chart will automatically load that data in.
+            </li>
+            <li>
+              You can delete the local data at any time by clicking <Icon fontSize="small" color="error">cookie</Icon> on the right-hand side of the chart items area.
             </li>
           </ul>
         </div>
@@ -358,15 +474,29 @@ export default function Home() {
               <HexColorPicker className="picker" color={chromaColour} onChange={ updateChromaColour } />
               </div> }
           </div>
+          <div className="form-group">
+            <FormGroup>
+              <FormControlLabel
+                control={<Switch checked={allowSaving} onChange={() => setAllowSaving(!allowSaving)} inputProps={{ 'aria-label': 'controlled' }} />}
+                label="Enable auto-save" />
+            </FormGroup>
+          </div>
         </div>
         <div className="items-form">
-          <h2>
+          <h2 className="flex-header">
             <span>Chart Items</span>
             <Tooltip title="Add item">
               <IconButton onClick={addNewItem}><Icon>add_circle</Icon></IconButton>
             </Tooltip>
             <Tooltip title="Remove all items">
               <IconButton onClick={removeAllItems}><Icon>layers_clear</Icon></IconButton>
+            </Tooltip>
+            <span className="flex-spacer"></span>
+            <Tooltip title="Save chart data">
+              <IconButton onClick={() => doAutoSave(true)}><Icon>save</Icon></IconButton>
+            </Tooltip>
+            <Tooltip title="Delete saved data">
+              <IconButton onClick={removeSaveData}><Icon color="error">cookie</Icon></IconButton>
             </Tooltip>
           </h2>
           {renderForm()}
